@@ -1,3 +1,7 @@
+import torch
+import torch.nn as nn
+import numpy as np
+
 class DeepNetwork(nn.Module):
     """
     Pytorch implementation for Deep Averaging Network for classification 
@@ -75,7 +79,7 @@ class DeepNetwork(nn.Module):
         
         
         
-    def train(self, X_train, Y_train, X_dev, Y_dev, loss_fn, optimizer, num_iterations=10000, batch_size = 100, check_every=100, verbose=True): 
+    def train_model(self, X_train, Y_train, X_dev, Y_dev, loss_fn, optimizer, num_iterations=10000, batch_size = 100, check_every=1000, verbose=True): 
         """
         Method to train the model. 
         
@@ -116,12 +120,12 @@ class DeepNetwork(nn.Module):
                 
                 #Check train accuracy (entire set, not just batch) 
                 train_y_pred, _ = self.predict(X_train)
-                train_acc = self.accuracy(train_y_pred, Y_train.detach().numpy()) 
+                train_acc = DeepNetwork.accuracy(train_y_pred, Y_train.detach().numpy()) 
                 train_accuracy.append(train_acc)
                 
                 #Check dev accuracy (entire set, not just batch) 
                 dev_y_pred, _ = self.predict(X_dev)
-                dev_acc = self.accuracy(dev_y_pred, Y_dev.detach().numpy())
+                dev_acc = DeepNetwork.accuracy(dev_y_pred, Y_dev.detach().numpy())
                 dev_accuracy.append(dev_acc)
                 
                 if verbose: print(f"Iteration={t}, Loss={loss_value}")
@@ -149,3 +153,12 @@ class DeepNetwork(nn.Module):
             y_pred = np.zeros(X.shape[0])
             y_pred[pred_pos_class>= 0.5] = 1
             return y_pred, pred_pos_class
+
+    @staticmethod
+    def accuracy(y_pred: np.ndarray, y_true: np.ndarray) -> float: 
+        """
+        Calculates accuracy. No need to modify this method. 
+        """
+        #print(y_pred)
+        #print(y_true)
+        return np.mean(y_pred == y_true)

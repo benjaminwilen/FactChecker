@@ -62,7 +62,7 @@ class StatementEmbeddings:
                 "y_test": y_test}
 
 
-    def storeEmbeddings(self, modelType, dataSet):
+    def storeEmbeddings(self, modelType, dataSet, embeddings, y):
         """
         model is either "bert", "t5-small", "t5-large"
         dataSet is either "train", "dev", "test"
@@ -71,14 +71,36 @@ class StatementEmbeddings:
         (make sure json file doesn't exist before function is run)
         """
         
-        X = self.data[f"X_{dataSet}"]
-        y = self.data[f"y_{dataSet}"]
+        embeddings_data = [[embeddings[i], y[i]] for i in range(embeddings.shape[0])]
+        # creating a list of index names
+        index_values = np.arange(embeddings.shape[0])
+        
+        # creating a list of column names
+        column_values = ['embeddings', "label"]
+        
+        # creating the dataframe
+        data = pd.DataFrame(data = embeddings_data, 
+                        index = index_values, 
+                        columns = column_values)
+        data.to_json(f'datasets/{modelType}-{dataSet}-data.json', orient = 'records', index = 'true')
+    
+    
+    def storeAllEmbeddings(self, model):
+        for dataSet in ["train", "dev", "test"]:
+            X = self.data[f"X_{dataSet}"]
+            y = self.data[f"y_{dataSet}"]
+            
+            embeddings = StatementEmbeddings.getEmbeddings(X)
+            self.storeEmbeddings(model, dataSet, embeddings, y)
 
-        model = None
-        tokenizer = None
-        embeddings = None
-
-        ## Get Embeddings ##
+    
+    @staticmethod
+    def formatStatement(speaker, statement) -> str:
+        return f"{speaker} said, '{statement}'"
+   
+   
+    @staticmethod
+    def getEmbeddings(statements, modelType) -> np.ndarray:
         if modelType == "bert":
             tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
             model = BertModel.from_pretrained('bert-base-uncased')
@@ -86,7 +108,7 @@ class StatementEmbeddings:
             embeddings = np.empty((len(X), 768))
             
             print(f"Progress for {modelType} {dataSet} statement embeddings")
-            for i, statement in tqdm(enumerate(X)):
+            for i, statement in tqdm(enumerate(statements)):
                 input_ids = torch.tensor(tokenizer.encode(statement)).unsqueeze(0)
                 outputs = model(input_ids, output_hidden_states=True)
                 last_hidden_states = outputs.hidden_states[-1]
@@ -101,7 +123,7 @@ class StatementEmbeddings:
             embeddings = np.empty((len(X), 512))
 
             print(f"Progress for {modelType} {dataSet} statement embeddings")
-            for i, statement in tqdm(enumerate(X)):
+            for i, statement in tqdm(enumerate(statements)):
                 input_ids = tokenizer.encode(statement, return_tensors="pt")  # Batch size 1
                 outputs = model(input_ids=input_ids, decoder_input_ids=input_ids)
                 last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
@@ -115,69 +137,15 @@ class StatementEmbeddings:
             embeddings = np.empty((len(X), 1024))
 
             print(f"Progress for {modelType} {dataSet} statement embeddings")
-            for i, statement in tqdm(enumerate(X)):
+            for i, statement in tqdm(enumerate(statements)):
                 input_ids = tokenizer.encode(statement, return_tensors="pt")  # Batch size 1
                 outputs = model(input_ids=input_ids, decoder_input_ids=input_ids)
                 last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
                 cls_tok = last_hidden_states[0,0,:]
                 embeddings[i] = cls_tok.detach()
         
-        ## Store Embeddings ##
+        return embeddings
 
-        embeddings_data = [[embeddings[i], y[i]] for i in range(embeddings.shape[0])]
-        # creating a list of index names
-        index_values = np.arange(embeddings.shape[0])
-        
-        # creating a list of column names
-        column_values = ['embeddings', "label"]
-        
-        # creating the dataframe
-        data = pd.DataFrame(data = embeddings_data, 
-                        index = index_values, 
-                        columns = column_values)
-        data.to_json(f'datasets/{modelType}-{dataSet}-data.json', orient = 'records', index = 'true')
-    
-    def storeAllEmbeddings(self, model) -> dict():
-        for dataSet in ["train", "dev", "test"]:
-            self.storeEmbeddings(model, dataSet)
-
-    
-    @staticmethod
-    def formatStatement(speaker, statement) -> str:
-        return f"{speaker} said, '{statement}'"
-   
-   
-    @staticmethod
-    def getEmbedding(statement, modelType) -> np.ndarray:
-        if modelType == "bert":
-            tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-            model = BertModel.from_pretrained('bert-base-uncased')
-            
-            input_ids = torch.tensor(tokenizer.encode(statement)).unsqueeze(0)
-            outputs = model(input_ids, output_hidden_states=True)
-            last_hidden_states = outputs.hidden_states[-1]
-            cls_tok = last_hidden_states[0,0,:]
-            return cls_tok.detach()
-
-        elif modelType == "t5-small":
-            tokenizer = T5Tokenizer.from_pretrained("t5-small")
-            model = T5Model.from_pretrained("t5-small")
-
-            input_ids = tokenizer.encode(statement, return_tensors="pt")  # Batch size 1
-            outputs = model(input_ids=input_ids, decoder_input_ids=input_ids)
-            last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
-            cls_tok = last_hidden_states[0,0,:]
-            return cls_tok.detach()
-        
-        elif modelType == "t5-large":
-            tokenizer = T5Tokenizer.from_pretrained("t5-large")
-            model = T5Model.from_pretrained("t5-large")
-
-            input_ids = tokenizer.encode(statement, return_tensors="pt")  # Batch size 1
-            outputs = model(input_ids=input_ids, decoder_input_ids=input_ids)
-            last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
-            cls_tok = last_hidden_states[0,0,:]
-            return cls_tok.detach()
     
     @staticmethod
     def retrieveEmbeddings(modelType) -> dict():
@@ -212,12 +180,3 @@ class StatementEmbeddings:
                 "y_dev": y_dev, 
                 "X_test": X_test, 
                 "y_test": y_test}
-
-
-
-
-if __name__ == "__main__":
-    embeddingsGenerator = StatementEmbeddings('politifact_factcheck_data.json')
-    embeddingsGenerator.storeAllEmbeddings("bert")
-    embeddingsGenerator.storeAllEmbeddings("t5-small")
-    embeddingsGenerator.storeAllEmbeddings("t5-large")
