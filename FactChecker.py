@@ -28,6 +28,8 @@ class FactChecker:
     def get_training_data_accuracy(self):
         print("Predicting test set")
         predictions = self.classifier.predict(self.data["X_test"])
+        self.predictions = predictions
+        self.y = self.data["y_test"]
         return FactChecker.accuracy(predictions, self.data["y_test"])
 
     def factCheck(self, statements):

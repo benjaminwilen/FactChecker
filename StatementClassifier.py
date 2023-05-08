@@ -39,7 +39,8 @@ class StatementClassifier:
         if self.modelType == "LR":
             return self.model.predict(X)
         elif self.modelType == "OR":
-            return self.model.model.predict(model.params, exog=X)
+            predicted_probs = self.model.model.predict(self.model.params, exog=X)
+            return [np.argmax(row) for row in predicted_probs]
         elif self.modelType == "DN":
             predictions, _ = self.model.predict(torch.Tensor(X))
             return predictions
