@@ -105,10 +105,10 @@ class StatementEmbeddings:
             tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
             model = BertModel.from_pretrained('bert-base-uncased')
             
-            embeddings = np.empty((len(X), 768))
+            embeddings = np.empty((len(statements), 768))
             
-            print(f"Progress for {modelType} {dataSet} statement embeddings")
-            for i, statement in tqdm(enumerate(statements)):
+            #print(f"Progress for {modelType} statement embeddings")
+            for i, statement in enumerate(statements):
                 input_ids = torch.tensor(tokenizer.encode(statement)).unsqueeze(0)
                 outputs = model(input_ids, output_hidden_states=True)
                 last_hidden_states = outputs.hidden_states[-1]
@@ -120,10 +120,10 @@ class StatementEmbeddings:
             tokenizer = T5Tokenizer.from_pretrained("t5-small")
             model = T5Model.from_pretrained("t5-small")
         
-            embeddings = np.empty((len(X), 512))
+            embeddings = np.empty((len(statements), 512))
 
-            print(f"Progress for {modelType} {dataSet} statement embeddings")
-            for i, statement in tqdm(enumerate(statements)):
+            #print(f"Progress for {modelType} statement embeddings")
+            for i, statement in enumerate(statements):
                 input_ids = tokenizer.encode(statement, return_tensors="pt")  # Batch size 1
                 outputs = model(input_ids=input_ids, decoder_input_ids=input_ids)
                 last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
@@ -134,10 +134,10 @@ class StatementEmbeddings:
             tokenizer = T5Tokenizer.from_pretrained("t5-large")
             model = T5Model.from_pretrained("t5-large")
         
-            embeddings = np.empty((len(X), 1024))
+            embeddings = np.empty((len(statements), 1024))
 
-            print(f"Progress for {modelType} {dataSet} statement embeddings")
-            for i, statement in tqdm(enumerate(statements)):
+            #print(f"Progress for {modelType} statement embeddings")
+            for i, statement in enumerate(statements):
                 input_ids = tokenizer.encode(statement, return_tensors="pt")  # Batch size 1
                 outputs = model(input_ids=input_ids, decoder_input_ids=input_ids)
                 last_hidden_states = outputs[0]  # The last hidden-state is the first element of the output tuple
