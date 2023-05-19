@@ -5,12 +5,34 @@ import torch
 from tqdm import tqdm
 
 class StatementEmbeddings:
-   
+    """ Generates sentence embeddings"""
+    
     def __init__(self, dataFile):
+        """
+        Reads the file containing raw data
+       
+        Arguments: 
+            - dataFile (str): File path to json file containing training statements
+            
+        """
         self.dataFrame = data = pd.read_json(dataFile, lines=True)
         self.data = self.getDataSets(self.dataFrame, ["pants-fire", "false", "mostly-false", "half-true", "mostly-true", "true"] )
 
     def getDataSets(self, dataFrame, labels, numTrain=1000, numDev=200, numTest=200) -> dict():
+        """
+        Generates testing, dev, and training examples from dataframe, excluding 2022 data
+
+        Arguments: 
+            - dataFrame (pandas.df): Dataframe of data 
+            - labels (List): Classses of data
+            - numTrain (int): number of training examples for each label
+            - numDev (int): number of dev examples for each label  
+            - numTest (int): number of testing examples for each label  
+            
+        Returns: (dict): Keys are "X_train", "y_train", "X_dev", "y_dev", "X_test", "y_test",
+                        and values are np.arrays of the corresponding data
+            
+        """
         X_train = []
         y_train = []
         X_dev = [] 
@@ -18,6 +40,7 @@ class StatementEmbeddings:
         X_test = []
         y_test = []
         for label_i, label in enumerate(labels):
+            # Get examples with label of for loop label
             collection = np.array(dataFrame.loc[dataFrame['verdict'] == label])
             
             y_original = collection[:,0]
@@ -32,6 +55,8 @@ class StatementEmbeddings:
                     correct_years_collection.append([StatementEmbeddings.formatStatement(speakers[i], X_original[i]), y_original[i]])
                 
             correct_years_collection = np.array(correct_years_collection)
+            
+            # Shuffle data before generating splits
             np.random.shuffle(correct_years_collection) 
             X_train.extend(correct_years_collection[:numTrain, 0])
             y_train.extend([label_i for j in range(numTrain)])
@@ -64,11 +89,15 @@ class StatementEmbeddings:
 
     def storeEmbeddings(self, modelType, dataSet, embeddings, y):
         """
-        model is either "bert", "t5-small", "t5-large"
-        dataSet is either "train", "dev", "test"
+        Arguments: 
+            - modelType (str): either "bert", "t5-small", "t5-large"
+            - dataSet (str): either "train", "dev", "test"  
+            - embeddings (List[List]): statement embeddings for that model and dataset
+            - y (List): labels for the statement embeddings
 
         This function stores embeddings in json file
         (make sure json file doesn't exist before function is run)
+        
         """
         
         embeddings_data = [[embeddings[i], y[i]] for i in range(embeddings.shape[0])]
@@ -86,6 +115,14 @@ class StatementEmbeddings:
     
     
     def storeAllEmbeddings(self, model):
+        """
+        Gets and stores all embeddings for that model in JSON files
+        
+        Arguments: 
+            - model (str): either "bert", "t5-small", "t5-large"  
+            
+        """
+        
         for dataSet in ["train", "dev", "test"]:
             X = self.data[f"X_{dataSet}"]
             y = self.data[f"y_{dataSet}"]
@@ -96,11 +133,24 @@ class StatementEmbeddings:
     
     @staticmethod
     def formatStatement(speaker, statement) -> str:
+        """ Appends speaker to start of statement
+            Used to handle cases where statement is specific to speaker          
+        """
         return f"{speaker} said, '{statement}'"
    
    
     @staticmethod
     def getEmbeddings(statements, modelType) -> np.ndarray:
+        """
+        For each model, tokenizes the statement, passses it through model,
+        and retrieves cls token embedding from hidden states
+        
+        Arguments: 
+            - statements (List): Statements to retrieve embeddings for  
+            - modelType (str): either "bert", "t5-small", "t5-large"
+            
+        Returns: (np.ndarray) Statement embedding for each statement         
+        """
         if modelType == "bert":
             tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
             model = BertModel.from_pretrained('bert-base-uncased')
@@ -149,6 +199,17 @@ class StatementEmbeddings:
     
     @staticmethod
     def retrieveEmbeddings(modelType) -> dict():
+        """
+        After statement embeddings have been generated and stored, this function
+        can be called to retrieve them from their json files without having to pass the statements
+        through the models again
+
+        Arguments: 
+            - modelType (str): either "bert", "t5-small", "t5-large"
+            
+        Returns: (dict): Keys are "X_train", "y_train", "X_dev", "y_dev", "X_test", "y_test",
+                        and values are np.arrays of the corresponding data
+        """
         train_df = pd.read_json(f'datasets/{modelType}-train-data.json', orient ='records')
         dev_df = pd.read_json(f'datasets/{modelType}-dev-data.json', orient ='records')
         test_df = pd.read_json(f'datasets/{modelType}-test-data.json', orient ='records')

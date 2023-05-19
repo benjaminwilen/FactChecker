@@ -4,7 +4,7 @@ import numpy as np
 
 class DeepNetwork(nn.Module):
     """
-    Pytorch implementation for Deep Averaging Network for classification 
+    Pytorch implementation for Deep Network for classification 
     """
     def __init__(self, num_classes, #number of labels / y-values
                      embedding_dim: int, #architecture/pre-processing decision 
@@ -15,9 +15,6 @@ class DeepNetwork(nn.Module):
                 ):
         """
         Create the network architecture. 
-        
-        Hints: 
-        - Make sure all your dimesions of various layers work out correctly 
         """
         super().__init__()
         self.num_classes = num_classes 
@@ -135,11 +132,8 @@ class DeepNetwork(nn.Module):
     def predict(self, X): 
         """
         Method to make predictions given a trained model. 
-        
-        No need to modify this method. 
         """
-        self.eval() # tells nn.Module its NOT in training mode 
-                 # (important when we get to things like dropout)
+        self.eval()
     
         pred_log_probs = self.forward(X)
         prediction = np.array([np.argmax(probs.detach().numpy()) for probs in pred_log_probs])
@@ -159,6 +153,4 @@ class DeepNetwork(nn.Module):
         """
         Calculates accuracy. No need to modify this method. 
         """
-        #print(y_pred)
-        #print(y_true)
         return np.mean(y_pred == y_true)
